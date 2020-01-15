@@ -1,4 +1,7 @@
 (defsystem "lisp-preprocessor"
+  :license "MIT"
+  :author "cxxxr"
+  :description "Common Lisp embedded template engine"
   :depends-on ("alexandria"
                "split-sequence"
                "trivial-gray-streams"
