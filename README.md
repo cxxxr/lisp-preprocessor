@@ -40,20 +40,6 @@ int main(void) {
 
 ## API
 
-### (compile-template text &key template-begin template-begin arguments)
-```common-lisp
-* (compile-template "foo #{ (princ \"bar\") #} baz") ; => #<FUNCTION (LAMBDA (#:STREAM)) {...}>
-* (funcall * *standard-output*)
-foo bar baz
-
-* (compile-template "foo {{{ (princ \"bar\" }}} baz" :template-begin "{{{" :template-end "}}}")
-* (funcall * *standard-output*)
-foo bar baz
-
-* (funcall (compile-template "#{ (princ (list ? ??)) #}" :arguments '(? ??)) *standard-output* "foo" "bar")
-(foo bar)
-```
-
 ### (run-template-into-stream compiland stream &rest arguments)
 ### (run-template-into-string compiland &rest arguments)
 ### (run-template-into-file compiland file &rest arguments)
@@ -64,10 +50,24 @@ foo bar baz
 ```
 compiland is a string or pathname, or a compiled template function.
 
+### (compile-template text &key template-begin template-begin arguments)
+```common-lisp
+* (compile-template "foo #{ (princ \"bar\") #} baz") ; => #<FUNCTION (LAMBDA (#:STREAM)) {...}>
+* (run-template-into-stream * *standard-output*)
+foo bar baz
+
+* (compile-template "foo {{{ (princ \"bar\" }}} baz" :template-begin "{{{" :template-end "}}}")
+* (run-template-into-stream * *standard-output*)
+foo bar baz
+
+* (run-template-into-stream (compile-template "#{ (princ (list ? ??)) #}" :arguments '(? ??)) *standard-output* "foo" "bar")
+(foo bar)
+```
+
 ## Syntax
 
 ```
-#{ ... #}
+#{ template #}
 ```
 
 ### indent
