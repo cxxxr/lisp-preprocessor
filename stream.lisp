@@ -42,29 +42,6 @@
 (defmethod stream-line-column ((stream emitter))
   (emitter-column stream))
 
-;; (defmethod stream-start-line-p ((stream emitter))
-;;   )
-
-;; (defmethod stream-write-string ((stream emitter) string)
-;;   )
-
-;; (defmethod stream-terpri ((stream emitter))
-;;   )
-
-;; (defmethod stream-finish-output ((stream emitter))
-;;   )
-
-;; (defmethod stream-clear-input ((stream emitter))
-;;   )
-
-;; (defmethod stream-advance-to-column ((stream emitter))
-;;   )
-
-;; (defmethod trivial-gray-streams::close ((stream emitter) &key abort)
-;;   (declare (ignore abort))
-;;   (close (emitter-stream stream))
-;;   t)
-
 (defun call-with-indent (emitter indent function)
   (let ((old-indent (emitter-indent emitter)))
     (setf (emitter-indent emitter) indent)

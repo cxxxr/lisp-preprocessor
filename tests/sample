@@ -41,3 +41,11 @@ int main(void) {
     printf("Loop: %d", 2);
     return 0;
 }
+
+(defun foo (#{ (format t "~{~(~A~)~^ ~}" (loop :for symbol :in '(a b c) :collect symbol)) #}
+            #{ :chop #}
+            #{ (format t " ~{~(~A~)~^ ~}" (loop :for symbol :in '(x y z) :collect symbol)) #})
+  (values a b c x y z))
+
+(defun foo (a b c x y z)
+  (values a b c x y z))

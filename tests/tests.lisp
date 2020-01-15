@@ -28,11 +28,20 @@
 
 (deftest tests
   (let ((samples (load-sample-file *sample-file*)))
-    (loop :for (input-text output-text) :in samples
-          :do (ok (string= (run-template-into-string input-text)
-                           output-text)))))
+    (loop :for (input-text expected-text) :in samples
+          :for actual-text := (run-template-into-string input-text)
+          :do (ok (string= actual-text expected-text)
+                  #+(or)(format nil "input:~%~A~%expected:~%~A~%actual:~%~A~%" input-text expected-text actual-text)))))
 
 (deftest argument-test
   (ok (string= "10" (run-template-into-string (compile-template "#{ (princ ?) #}"
                                                                 :arguments (list '?))
                                               10))))
+
+(deftest chop-test
+  (ok (string= "foobar" (run-template-into-string "foo
+
+#{ :chop #}
+
+bar"))))
+
