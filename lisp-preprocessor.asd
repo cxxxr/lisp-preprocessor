@@ -17,5 +17,6 @@
                "rove")
   :serial t
   :pathname "tests"
-  :components ((:file "tests"))
+  :components ((:file "in-template")
+               (:file "tests"))
   :perform (test-op (o c) (symbol-call :rove '#:run c)))

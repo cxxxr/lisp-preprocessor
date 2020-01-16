@@ -62,8 +62,8 @@
   (let ((text (etypecase string-or-pathname
                 (pathname (read-file-into-string string-or-pathname))
                 (string string-or-pathname)))
-        (*package* *in-template-package*)
-        (forms '()))
+        (forms '())
+        (*package* *in-template-package*))
     (loop :with end
           :for start := 0 :then end
           :for pos := (search *template-begin* text :start2 start)
@@ -83,9 +83,10 @@
 (defun compile-template (string-or-pathname
                          &key ((:template-begin *template-begin*) *template-begin*)
                               ((:template-end *template-end*) *template-end*)
-                              ((:in-template-package *package*) *in-template-package*)
+                              ((:in-template-package *in-template-package*) *in-template-package*)
                               arguments)
-  (let ((forms (load-template string-or-pathname))
+  (let ((*package* *in-template-package*)
+        (forms (load-template string-or-pathname))
         (output "")
         (chopping nil)
         (compiled-forms '()))

@@ -45,3 +45,17 @@
 
 bar"))))
 
+(deftest change-template-marker-test
+  (ok (string= "123"
+               (run-template-into-string (compile-template "{{{ (princ 123) }}}"
+                                                           :template-begin "{{{"
+                                                           :template-end "}}}")))))
+
+(deftest change-template-package-test
+  (ok (string= "test"
+               (run-template-into-string
+                (compile-template "#{ (princ (object-reader $arg)) #}"
+                                  :in-template-package (find-package :lisp-preprocessor-tests.in-template)
+                                  :arguments '($arg))
+                (make-instance 'lisp-preprocessor-tests.in-template:object
+                               :reader "test")))))
