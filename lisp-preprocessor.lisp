@@ -58,31 +58,34 @@
               (return (1- count)))
         :finally (return pos)))
 
-(defun load-template (text)
-  (let ((*package* *in-template-package*))
-    (let ((forms '()))
-      (loop :with end
-            :for start := 0 :then end
-            :for pos := (search *template-begin* text :start2 start)
-            :while pos
-            :do (unless (= start pos) (push (subseq text start pos) forms))
-                (with-input-from-string (in text :start (begin+ pos))
-                  (multiple-value-bind (template-form next)
-                      (read-template-form in text (compute-column text pos))
-                    (setq end next)
-                    (push template-form forms)))
-            :finally (push (subseq text start) forms))
-      (nreverse forms))))
+(defun load-template (string-or-pathname)
+  (let ((text (etypecase string-or-pathname
+                (pathname (read-file-into-string string-or-pathname))
+                (string string-or-pathname)))
+        (*package* *in-template-package*)
+        (forms '()))
+    (loop :with end
+          :for start := 0 :then end
+          :for pos := (search *template-begin* text :start2 start)
+          :while pos
+          :do (unless (= start pos) (push (subseq text start pos) forms))
+              (with-input-from-string (in text :start (begin+ pos))
+                (multiple-value-bind (template-form next)
+                    (read-template-form in text (compute-column text pos))
+                  (setq end next)
+                  (push template-form forms)))
+          :finally (push (subseq text start) forms))
+    (nreverse forms)))
 
 (defun reintern-symbol (symbol)
   (intern (string symbol) *in-template-package*))
 
-(defun compile-template (text
+(defun compile-template (string-or-pathname
                          &key ((:template-begin *template-begin*) *template-begin*)
                               ((:template-end *template-end*) *template-end*)
                               arguments)
   (let ((*package* *in-template-package*)
-        (forms (load-template text))
+        (forms (load-template string-or-pathname))
         (output "")
         (chopping nil)
         (compiled-forms '()))
