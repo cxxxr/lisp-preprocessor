@@ -83,9 +83,9 @@
 (defun compile-template (string-or-pathname
                          &key ((:template-begin *template-begin*) *template-begin*)
                               ((:template-end *template-end*) *template-end*)
+                              ((:in-template-package *package*) *in-template-package*)
                               arguments)
-  (let ((*package* *in-template-package*)
-        (forms (load-template string-or-pathname))
+  (let ((forms (load-template string-or-pathname))
         (output "")
         (chopping nil)
         (compiled-forms '()))
