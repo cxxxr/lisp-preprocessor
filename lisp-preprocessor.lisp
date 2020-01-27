@@ -45,11 +45,18 @@
               (let ((pos (file-position stream)))
                 (push form template-form)
                 (when (string= text *template-end* :start1 pos :end1 (end+ pos))
-                  (return (values (tweak (nreverse template-form))
-                                  (if-let (next-line-pos (or (blank-line-p text (end+ pos))
-                                                             (end-of-line-p text (end+ pos))))
-                                    next-line-pos
-                                    (end+ pos)))))))))
+                  (return
+                    (let (next-line-pos)
+                      (cond ((setq next-line-pos (blank-line-p text (end+ pos)))
+                             (values (tweak (nreverse template-form))
+                                     next-line-pos))
+                            ((setq next-line-pos (end-of-line-p text (end+ pos)))
+                             (values (tweak (nreverse template-form))
+                                     next-line-pos
+                                     t))
+                            (t
+                             (values (tweak (nreverse template-form))
+                                     (end+ pos)))))))))))
 
 (defun compute-column (text pos)
   (loop :for i :downfrom pos :to 0
@@ -68,17 +75,64 @@
           :for start := 0 :then end
           :for pos := (search *template-begin* text :start2 start)
           :while pos
-          :do (unless (= start pos) (push (subseq text start pos) forms))
+          :do (unless (= start pos) (push (list :string (subseq text start pos)) forms))
               (with-input-from-string (in text :start (begin+ pos))
-                (multiple-value-bind (template-form next)
+                (multiple-value-bind (template-form next fresh-line-p)
                     (read-template-form in text (compute-column text pos))
                   (setq end next)
-                  (push template-form forms)))
-          :finally (push (subseq text start) forms))
+                  (push template-form forms)
+                  (when fresh-line-p
+                    (push '(:fresh-line) forms))))
+          :finally (push (list :string (subseq text start)) forms))
     (nreverse forms)))
 
 (defun reintern-symbol (symbol)
   (intern (string symbol) *in-template-package*))
+
+(defun empty-string-p (string)
+  (not (find-if (lambda (c)
+                  (not (find c +whitespaces+)))
+                string)))
+
+(defun chop-in-forms (forms)
+  (loop :with temporary-forms := '()
+        :and new-forms := '()
+        :and chop-flag := nil
+        :for form :in forms
+        :do (trivia:match form
+              ((list :string string)
+               (if chop-flag
+                   (push (list :string (string-left-trim +whitespaces+ string)) temporary-forms)
+                   (push form temporary-forms)))
+              ((list :fresh-line)
+               (unless chop-flag
+                 (push form temporary-forms)))
+              ((list :chop)
+               (let ((acc '()))
+                 (loop :for form :in temporary-forms
+                       :do (trivia:match form
+                             ((list :string string)
+                              (let ((string (string-right-trim +whitespaces+ string)))
+                                (if (zerop (length string))
+                                    nil
+                                    (progn
+                                      (push (list :string string) acc)
+                                      (return)))))
+                             ((list :fresh-line)
+                              nil)
+                             (otherwise
+                              (return))))
+                 (setq temporary-forms '())
+                 (setq new-forms (append acc new-forms)))
+               (setq chop-flag t))
+              (otherwise
+               (setq chop-flag nil)
+               (setq new-forms
+                     (append temporary-forms
+                             new-forms))
+               (push form new-forms)
+               (setq temporary-forms '())))
+        :finally (return (nreverse (append temporary-forms new-forms)))))
 
 (defun compile-template (string-or-pathname
                          &key ((:template-begin *template-begin*) *template-begin*)
@@ -89,6 +143,7 @@
         (forms (load-template string-or-pathname))
         (output "")
         (chopping nil)
+        (fresh-line-reservation nil)
         (compiled-forms '()))
     (labels ((chop-left (string)
                (if chopping
@@ -97,30 +152,42 @@
              (chop-right (string)
                (string-right-trim +whitespaces+ string))
              (emit (string)
-               (setq output (concatenate 'string output (chop-left string)))))
-      (dolist (form forms)
-        (trivia:ematch form
-          ((type string)
-           (emit form)
-           (setq chopping nil))
-          ((list* :indent indent lisp-forms)
-           (push `(write-string ,output) compiled-forms)
-           (setq output "")
-           (push `(lisp-preprocessor.in-template:with-indent ,indent . ,lisp-forms)
-                 compiled-forms)
-           (setq chopping nil))
-          ((cons :form lisp-forms)
-           (push `(write-string ,output) compiled-forms)
-           (setq output "")
-           (trivia:match lisp-forms
-             ((list (type symbol))
-              (push `(princ ,(first lisp-forms)) compiled-forms))
-             (otherwise
-              (dolist (form lisp-forms) (push form compiled-forms))))
-           (setq chopping nil))
-          ((list :chop)
-           (setq chopping t)
-           (setq output (chop-right output)))))
+               (setq output (concatenate 'string output (chop-left string))))
+             (fresh-line-if-reserved ()
+               (when fresh-line-reservation
+                 (push '(fresh-line) compiled-forms)
+                 (setq fresh-line-reservation nil))))
+      (loop :for form :in (chop-in-forms forms)
+            :do (trivia:ematch form
+                  ((list :string string)
+                   (fresh-line-if-reserved)
+                   (emit string)
+                   (setq chopping nil))
+                  ((list* :indent indent lisp-forms)
+                   (fresh-line-if-reserved)
+                   (push `(write-string ,output) compiled-forms)
+                   (setq output "")
+                   (push `(lisp-preprocessor.in-template:with-indent ,indent . ,lisp-forms)
+                         compiled-forms)
+                   (setq chopping nil))
+                  ((cons :form lisp-forms)
+                   (fresh-line-if-reserved)
+                   (push `(write-string ,output) compiled-forms)
+                   (setq output "")
+                   (trivia:match lisp-forms
+                     ((list (type symbol))
+                      (push `(princ ,(first lisp-forms)) compiled-forms))
+                     (otherwise
+                      (dolist (form lisp-forms) (push form compiled-forms))))
+                   (setq chopping nil))
+                  ((list :fresh-line)
+                   (unless chopping
+                     (setq fresh-line-reservation t)))
+                  ((list :chop)
+                   (setq chopping t)
+                   (setq fresh-line-reservation nil)
+                   (setq output (chop-right output)))
+                  ((list :nop))))
       (when output
         (push `(write-string ,output) compiled-forms)))
     (setq compiled-forms (nreverse compiled-forms))

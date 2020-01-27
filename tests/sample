@@ -49,3 +49,15 @@ int main(void) {
 
 (defun foo (a b c x y z)
   (values a b c x y z))
+
+key1 = #{ (princ "value1") #}
+key2 = #{ (princ "value2") #}
+
+key1 = value1
+key2 = value2
+
+hoge = #{ (princ 100) #}
+end
+
+hoge = 100
+end

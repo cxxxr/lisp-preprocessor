@@ -30,8 +30,8 @@
   (let ((samples (load-sample-file *sample-file*)))
     (loop :for (input-text expected-text) :in samples
           :for actual-text := (run-template-into-string input-text)
-          :do (ok (string= actual-text expected-text)
-                  #+(or)(format nil "input:~%~A~%expected:~%~A~%actual:~%~A~%" input-text expected-text actual-text)))))
+          :do (ok (string= (string-right-trim '(#\newline) actual-text) (string-right-trim '(#\newline) expected-text))
+                  (format nil "input:~%~S~%expected:~%~S~%actual:~%~S~%" input-text expected-text actual-text)))))
 
 (deftest argument-test
   (ok (string= "10" (run-template-into-string (compile-template "#{ (princ ?) #}"
