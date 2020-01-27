@@ -39,6 +39,10 @@
         :do (write-char c stream))
   string)
 
+(defmethod stream-fresh-line ((stream emitter))
+  (unless (zerop (emitter-column stream))
+    (stream-write-char stream #\newline)))
+
 (defmethod stream-line-column ((stream emitter))
   (emitter-column stream))
 
