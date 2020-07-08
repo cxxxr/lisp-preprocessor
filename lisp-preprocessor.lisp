@@ -76,7 +76,8 @@
           :for pos := (search *template-begin* text :start2 start)
           :while pos
           :do (unless (= start pos) (push (list :string (subseq text start pos)) forms))
-              (with-input-from-string (in text :start (begin+ pos))
+              (with-input-from-string (in text)
+                (file-position in (begin+ pos))
                 (multiple-value-bind (template-form next fresh-line-p)
                     (read-template-form in text (compute-column text pos))
                   (setq end next)
